@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">BusinessCardImporter</string>
+    <string name="action_settings">Settings</string>
+    <string name="capture_image">Capture Image</string>
+    <string name="import_image">Import Image</string>
+    <string name="title_activity_home">HomeActivity</string>
+    <string name="Text">What would you like to do?</string>
+    <string name="saveImage">Save image?</string>
+    <string name="Yes">Yes</string>
+    <string name="No">No</string>
+    <string name="title_activity_smoother">SmootherActivity</string>
+    <string name="hello_world">Hello world!</string>
+
+</resources>
