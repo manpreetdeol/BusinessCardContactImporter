@@ -1,17 +1,18 @@
 
 package com.example.businesscardimporter;
 
-
-
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import com.example.businesscardimporter.R;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.annotation.TargetApi;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
@@ -19,9 +20,11 @@ import android.hardware.Camera.PictureCallback;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.ContactsContract;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NavUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,7 +32,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
-public class MainActivity extends FragmentActivity implements NoticeDialogFragment.NoticeDialogListener {
+public class MainActivity extends FragmentActivity implements NoticeDialogFragment.NoticeDialogListener, Runnable {
 
 	public static final int MEDIA_TYPE_IMAGE = 1;
 	File pictureFile;
@@ -40,6 +43,11 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 	Button captureButton;
 	PackageManager pkmgr;
 	protected byte[] fileData;
+	
+	//variables to store parsed information
+    private String DisplayName = "";
+    private String emailID = "";
+    private String WorkNumber = "";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +150,7 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 
 	    // Create a media file name	    
 	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-	    imageFileName = mediaStorageDir.getPath() + File.separator + "IMG_"+ timeStamp + ".png";
+	    imageFileName = mediaStorageDir.getPath() + File.separator + "card.png";//"IMG_"+ timeStamp + ".png";
 	    File mediaFile;
 	    if (type == MEDIA_TYPE_IMAGE){
 	        mediaFile = new File(imageFileName);
@@ -229,13 +237,140 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
             
             Toast.makeText(getApplicationContext(), "Image Saved", Toast.LENGTH_SHORT).show();
             
-            PreProcessing.inputForSmoothing(imageFileName);
+//            PreProcessing.inputForSmoothing(imageFileName);
+            
+            sendToServlet();
 
         } catch (Exception e) {
            System.out.println(e.getStackTrace());
         }
 		
 	}
+
+	private void sendToServlet() {
+			
+			Thread thread = new Thread(new MainActivity());
+			thread.start();
+			
+	}
+
+		@Override
+		public void run() {
+			
+			File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+		              Environment.DIRECTORY_PICTURES), "MyCameraApp");
+			try {
+			    // Set your file path here
+			    FileInputStream fstrm = new FileInputStream(imageFileName);			
+				
+				
+			    // Set your server page url (and the file title/description)
+			    HttpFileUpload hfu = new HttpFileUpload("http://192.168.2.48:8080/ImagePreprocessing/PreprocessingPath", "image","Image to be preprocessed");
+
+			   String response =  hfu.Send_Now(imageFileName);
+			   
+			   
+			   //Extract inform the text
+			   extractInformation(response);
+			   
+			   // prompt user to add user details in Contacts
+			   promptUserToAddDetailsToContacts();
+			   
+			  } catch (Exception e) {
+			    System.out.println(e.getMessage());
+			  }
+			
+	
+	}
+		
+	private void promptUserToAddDetailsToContacts() {
+
+		
+		// popup to prompt user to add contact
+		new AlertDialog.Builder(this)
+		  .setMessage("Add contact to address book?")
+		  .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int whichButton) {
+		      Log.d("TAG","Clicked Dialog: Yes!");
+		      
+		      // calls function to generate intent to add contact
+		      addContact();
+		    }
+		  }) 
+		  .setNegativeButton("No", new DialogInterface.OnClickListener() {
+		    public void onClick(DialogInterface dialog, int whichButton) {
+		    	Log.d("TAG","Clicked Dialog: Cancel");
+		    }
+		  })
+		  .show(); 
+			
+		}
+	//calls intent to add contact
+	private void addContact() {
+
+	    Intent intent = new Intent(Intent.ACTION_INSERT);
+	    intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+
+	    intent.putExtra(ContactsContract.Intents.Insert.NAME, DisplayName);
+	    intent.putExtra(ContactsContract.Intents.Insert.PHONE, WorkNumber);
+	    intent.putExtra(ContactsContract.Intents.Insert.EMAIL, emailID);
+
+	    this.startActivity(intent);
+
+	}
+
+	//code to parse OCR output using regular expressions
+	private void extractInformation(String str) {
+
+	    Pattern p;
+	    Matcher m;
+
+	    /*
+	     * Name-matching Expression - Matches: T.V. Raman Alan Viverette Charles L.
+	     * Chen Julie Lythcott-Haimes - Does not match: Google Google User
+	     * Experience Team 650-720-5555 cell
+	     */
+	    p = Pattern.compile("^([A-Z]([a-z]*|\\.) *){1,2}([A-Z][a-z]+-?)+$", Pattern.MULTILINE);
+	    m = p.matcher(str);
+
+	    if (m.find()) {
+	      DisplayName = m.group().toString();
+	    }
+	    
+	    /*
+	     * Email-matching Expression - Matches: email: raman@google.com
+	     * spam@google.co.uk v0nn3gu7@ice9.org name @ host.com - Does not match:
+	     * #@/.cJX Google c@t
+	     */
+	    //p = Pattern.compile("([A-Za-z0-9]+ *@ *[A-Za-z0-9]+(\\.[A-Za-z]{2,4})+)$", Pattern.MULTILINE);
+	    //p = Pattern.compile("(.+ *@ *.+(\\..{2,4})+)$", Pattern.MULTILINE);
+	    p = Pattern.compile("([^ \n]+ *@ *.+(\\..{2,4})+)$", Pattern.MULTILINE);
+	    m = p.matcher(str);
+
+	    if (m.find()) {
+	      emailID = m.group(1);
+	    }
+
+	    /*
+	     * Phone-matching Expression - Matches: 1234567890 (650) 720-5678
+	     * 650-720-5678 650.720.5678 - Does not match: 12345 12345678901 720-5678
+	     */
+	    p = Pattern.compile("(?:^|\\D)(\\d{3})[)\\-. ]*?(\\d{3})[\\-. ]*?(\\d{4})(?:$|\\D)");
+	    m = p.matcher(str);
+
+	    if (m.find()) {
+	      String phone = "(" + m.group(1) + ") " + m.group(2) + "-" + m.group(3);
+	      
+	      WorkNumber = phone;
+	    }
+
+
+	    //displays results for testing
+	    String output = new String();
+	    output = "Name: " + DisplayName + "\n" + "Phone: " + WorkNumber + "\n" + "Email: " + emailID + "\n";
+	    Log.d("TAG", "Input: " + str);
+	    Log.d("TAG",output);
+  }
 
 	@Override
 	public void onDialogNegativeClick(DialogFragment dialog) {

@@ -96,7 +96,7 @@ public class PreProcessing {
         
 //        Imgproc.equalizeHist(inputMat, inputMat);
 
-        Mat outputMat = new Mat(resultWidth, resultHeight, CvType.CV_8UC4);
+        Mat outputMat = new Mat(resultWidth, resultHeight, CvType.CV_32FC2);
         
         Point ocvPOut1 = new Point(0, 0);
         Point ocvPOut2 = new Point(0, resultHeight);
@@ -154,8 +154,8 @@ public class PreProcessing {
 		  Imgproc.Canny(img_gray, img_gray, 80, 100);
 		  Highgui.imwrite(canny_file, img_gray);
 		  
-//		  Imgproc.GaussianBlur(img, img, new Size(15,15),50.00);
-//		  Highgui.imwrite("img_blur.png", img);
+		  Imgproc.GaussianBlur(img_gray, img_gray, new Size(15,15),50.00);
+		  Highgui.imwrite("img_blur.png", img_gray);
 		  
 //		  Imgproc.adaptiveThreshold(img, img, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV, 15, 4);
 //		  Highgui.imwrite("img_threshold.png", img);
@@ -213,8 +213,7 @@ public class PreProcessing {
 	       Point p4 = new Point(temp_double[0], temp_double[1]);
 	      // Core.circle(imgSource,p4,100,new Scalar(0,0,255));
 	       
-	       
-	       // rearranging the points - BL, TL, TR, BR
+//	       // rearranging the points - BL, TL, TR, BR
 	       TreeMap<Double, String> sortX = new TreeMap<Double, String>();
 	       TreeMap<Double, Double> sortY = new TreeMap<Double, Double>(Collections.reverseOrder());
 	       
@@ -223,10 +222,39 @@ public class PreProcessing {
 	       sortX.put(p3.x, "p3");
 	       sortX.put(p4.x, "p4");
 	       
-	       sortY.put(p1.y, p1.x);
-	       sortY.put(p2.y, p2.x);
-	       sortY.put(p3.y, p3.x);
-	       sortY.put(p4.y, p4.x);
+	       if(sortY.containsKey(p1.y)){
+	    	   p1.y = p1.y + 1;
+	    	   sortY.put(p1.y, p1.x);
+	       }
+	       else {
+	    	   sortY.put(p1.y, p1.x);
+	       }
+	       if(sortY.containsKey(p2.y)){
+	    	   p2.y = p2.y + 1;
+	    	   sortY.put(p2.y, p2.x);
+	       }
+	       else {
+	    	   sortY.put(p2.y, p2.x);
+	       }
+	       if(sortY.containsKey(p3.y)){
+	    	   p3.y = p3.y + 1;
+	    	   sortY.put(p3.y, p3.x);
+	       }
+	       else {
+	    	   sortY.put(p3.y, p3.x);
+	       }
+	       if(sortY.containsKey(p4.y)){
+	    	   p4.y = p4.y + 1;
+	    	   sortY.put(p4.y, p4.x);
+	       }
+	       else {
+	    	   sortY.put(p4.y, p4.x);
+	       }
+	       
+//	       sortY.put(p1.y, p1.x);
+//	       sortY.put(p2.y, p2.x);
+//	       sortY.put(p3.y, p3.x);
+//	       sortY.put(p4.y, p4.x);
 	       
 	       Point points[]=new Point[4];
 	       int i=0;
@@ -234,7 +262,7 @@ public class PreProcessing {
 	    	    Double keyY = entry.getKey();
 	    	    Double valueX = entry.getValue();
 	    	    points[i]=new Point(valueX,keyY);
-	    	    System.out.println(valueX+" "+keyY);
+	    	    System.out.println(valueX+"-"+keyY);
 	    	    i++;
 	    	}
 	       
@@ -276,6 +304,10 @@ public class PreProcessing {
 	       source.add(topLeft);
 	       source.add(topRight);
 	       source.add(bottomRight);
+//	       source.add(p1);
+//	       source.add(p2);
+//	       source.add(p3);
+//	       source.add(p4);
 	       
 	       Mat startM = Converters.vector_Point2f_to_Mat(source);
 	       Mat result=warp(sourceImage,startM);
