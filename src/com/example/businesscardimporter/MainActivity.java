@@ -32,7 +32,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
-public class MainActivity extends FragmentActivity implements NoticeDialogFragment.NoticeDialogListener, Runnable {
+public class MainActivity extends FragmentActivity implements NoticeDialogFragment.NoticeDialogListener{
 
 	public static final int MEDIA_TYPE_IMAGE = 1;
 	File pictureFile;
@@ -247,15 +247,15 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 		
 	}
 
-	private void sendToServlet() {
+//	private void sendToServlet() {
 			
-			Thread thread = new Thread(new MainActivity());
-			thread.start();
+//			Thread thread = new Thread(new MainActivity());
+//			thread.start();
 			
-	}
+//	}
 
-		@Override
-		public void run() {
+//		@Override
+		public void sendToServlet() {
 			
 			File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 		              Environment.DIRECTORY_PICTURES), "MyCameraApp");
@@ -275,6 +275,7 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 			   
 			   // prompt user to add user details in Contacts
 			   promptUserToAddDetailsToContacts();
+//			   addContact();
 			   
 			  } catch (Exception e) {
 			    System.out.println(e.getMessage());
@@ -284,7 +285,6 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 	}
 		
 	private void promptUserToAddDetailsToContacts() {
-
 		
 		// popup to prompt user to add contact
 		new AlertDialog.Builder(this)
@@ -295,6 +295,9 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 		      
 		      // calls function to generate intent to add contact
 		      addContact();
+		      
+		      // close the current actvity
+		      finish();
 		    }
 		  }) 
 		  .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -349,6 +352,7 @@ public class MainActivity extends FragmentActivity implements NoticeDialogFragme
 
 	    if (m.find()) {
 	      emailID = m.group(1);
+	      emailID = emailID.split(" ")[0];
 	    }
 
 	    /*
